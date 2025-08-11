@@ -12,6 +12,7 @@ type Product struct {
 	Inventory     Inventory      `gorm:"foreignKey:InventoryID;references:ID"`
 	Name          string         `gorm:"size:100;notnull"`
 	Price         float64        `gorm:"notnull"`
+	Stock         int            `gorm:"notnull"`
 	Description   string         `gorm:"size:255;notnull"`
 	Image         string         `gorm:"size:255;default:null"`
 	OrderProducts []OrderProduct `gorm:"foreignKey:ProductID"`

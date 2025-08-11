@@ -12,18 +12,23 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-func main(){
+func main() {
 	db := config.Database()
-  validate := validator.New()
+	validate := validator.New()
 
 	userRepo := repository.NewUserRepositoryImpl(db)
-  userService := service.NewUserServiceImpl(userRepo, validate)
-  userHandler := handler.NewUserHandlerImpl(userService)
+	userService := service.NewUserServiceImpl(userRepo, validate)
+	userHandler := handler.NewUserHandlerImpl(userService)
 
-  router := route.NewRouter(userHandler)
+	inventoryRepo := repository.NewInventoryRepositoryImpl(db)
+	inventoryService := service.NewInventoryServiceImpl(inventoryRepo, validate)
+	inventoryHandler := handler.NewInventoryHandlerImpl(inventoryService)
 
-  port := os.Getenv("PORT_APP")
-  log.Println("server run in port ", port)
-  router.Run(port)
+
+	router := route.NewRouter(userHandler, inventoryHandler)
+
+	port := os.Getenv("PORT_APP")
+	log.Println("server run in port ", port)
+	router.Run(port)
 
 }

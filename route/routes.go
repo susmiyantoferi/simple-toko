@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(UserHandler handler.UserHandler) *gin.Engine {
+func NewRouter(UserHandler handler.UserHandler, InventHandler handler.InventoryHandler) *gin.Engine {
 	router := gin.Default()
 
 	api := router.Group("/api/")
@@ -18,6 +18,12 @@ func NewRouter(UserHandler handler.UserHandler) *gin.Engine {
 		api.GET("users/id/:userId", UserHandler.FindById)
 		api.GET("users/email/:email", UserHandler.FindByEmail)
 		api.GET("users", UserHandler.FindAll)
+
+		api.POST("inventory", InventHandler.Create)
+		api.PUT("inventory/:invId", InventHandler.Update)
+		api.DELETE("inventory/:invId", InventHandler.Delete)
+		api.GET("inventory/:invId", InventHandler.FindById)
+		api.GET("inventory", InventHandler.FindAll)
 
 	}
 

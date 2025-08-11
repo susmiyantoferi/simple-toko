@@ -59,7 +59,7 @@ func (r *userServiceImpl) Create(ctx context.Context, req *web.UserCreateRequest
 			return nil, ErrorEmailExist
 		}
 
-		return nil, ErrorEmailExist
+		return nil, fmt.Errorf("user service: create: %w", err)
 	}
 
 	response := helper.ToUserResponse(created)
