@@ -24,8 +24,12 @@ func main() {
 	inventoryService := service.NewInventoryServiceImpl(inventoryRepo, validate)
 	inventoryHandler := handler.NewInventoryHandlerImpl(inventoryService)
 
+	addresRepo := repository.NewAddressRepositoryImpl(db)
+	addressService := service.NewAddressServiceImpl(addresRepo, userRepo, validate)
+	addressHandler := handler.NewAddressHandlerImpl(addressService)
 
-	router := route.NewRouter(userHandler, inventoryHandler)
+
+	router := route.NewRouter(userHandler, inventoryHandler, addressHandler)
 
 	port := os.Getenv("PORT_APP")
 	log.Println("server run in port ", port)
