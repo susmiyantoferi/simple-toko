@@ -20,6 +20,8 @@ func NewUserRepositoryImpl(db *gorm.DB) *userRepositoryImpl {
 var ErrorIdNotFound = errors.New("id not found")
 var ErrorEmailNotFound = errors.New("email not found")
 var ErrorEmailExist = errors.New("email already exist")
+var ErrNotEnoughStock = errors.New("not enough stock")
+var ErrorValidation = errors.New("validation failed")
 
 func (r *userRepositoryImpl) Create(ctx context.Context, user *entity.User) (*entity.User, error) {
 	if err := r.Db.WithContext(ctx).Create(user).Error; err != nil {

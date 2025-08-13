@@ -38,7 +38,7 @@ func (a *addressServiceImpl) Create(ctx context.Context, req *web.AddressCreateR
 		if errors.Is(err, repository.ErrorIdNotFound) {
 			return nil, ErrorIdNotFound
 		}
-		return nil, fmt.Errorf("address service: create: %w", err)
+		return nil, fmt.Errorf("address service: find user: %w", err)
 	}
 
 	adrs := entity.Address{

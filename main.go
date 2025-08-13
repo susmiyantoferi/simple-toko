@@ -13,6 +13,10 @@ import (
 )
 
 func main() {
+	if err := os.MkdirAll("uploads/product/", os.ModePerm); err != nil {
+		log.Fatal("failed make folder product")
+	}
+
 	db := config.Database()
 	validate := validator.New()
 
@@ -28,8 +32,11 @@ func main() {
 	addressService := service.NewAddressServiceImpl(addresRepo, userRepo, validate)
 	addressHandler := handler.NewAddressHandlerImpl(addressService)
 
+	productRepo := repository.NewProductRepositoryImpl(db)
+	productService := service.NewProductServiceImpl(productRepo, inventoryRepo, validate)
+	productHandler := handler.NewProductHandlerImpl(productService)
 
-	router := route.NewRouter(userHandler, inventoryHandler, addressHandler)
+	router := route.NewRouter(userHandler, inventoryHandler, addressHandler, productHandler)
 
 	port := os.Getenv("PORT_APP")
 	log.Println("server run in port ", port)

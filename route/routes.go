@@ -10,6 +10,7 @@ func NewRouter(
 	UserHandler handler.UserHandler,
 	InventHandler handler.InventoryHandler,
 	AddressHandler handler.AddressHandler,
+	ProductHandler handler.ProductHandler,
 ) *gin.Engine {
 	router := gin.Default()
 
@@ -34,6 +35,16 @@ func NewRouter(
 		api.DELETE("address/:id", AddressHandler.Delete)
 		api.GET("address/user/:userId", AddressHandler.FindByUserId)
 		api.GET("address", AddressHandler.FindAll)
+
+		api.POST("product", ProductHandler.Create)
+		api.PUT("product/:productId", ProductHandler.Update)
+		api.DELETE("product/:productId", ProductHandler.Delete)
+		api.GET("product/:productId", ProductHandler.FindById)
+		api.GET("product", ProductHandler.FindAll)
+		api.PUT("product/:productId/add", ProductHandler.AddStock)
+		api.PUT("product/:productId/reduce", ProductHandler.ReduceStock)
+		api.PUT("product/image/:productId", ProductHandler.UpdateImage)
+		api.GET("product/image/:productId", ProductHandler.PreviewImage)
 
 	}
 
