@@ -48,11 +48,11 @@ func NewRouter(
 		api.GET("product/image/:productId", ProductHandler.PreviewImage)
 
 		api.POST("order", OrderHandler.CreateOrder)
-		api.PUT("order/address/:orderId", OrderHandler.UpdateAddress)
-		api.DELETE("order/:orderId", OrderHandler.Delete)
-		api.GET("order/:orderId", OrderHandler.FindById)
+		api.PUT("order/address/:id", OrderHandler.UpdateAddress)
+		api.DELETE("order/:id", OrderHandler.Delete)
+		api.GET("order/:id", OrderHandler.FindById)
 		api.GET("order", OrderHandler.FindAll)
-		api.PUT("order/confirm/:orderId", OrderHandler.ConfirmOrder)
+		api.PUT("order/confirm/:id", OrderHandler.ConfirmOrder)
 
 	}
 

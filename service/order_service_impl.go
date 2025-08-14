@@ -92,6 +92,9 @@ func (o *orderServiceImpl) UpdateAddress(ctx context.Context, req *web.OrderUpda
 		if errors.Is(err, repository.ErrAddressNotFound) {
 			return nil, ErrAddressNotFound
 		}
+		if errors.Is(err, repository.ErrOrderNotFound) {
+			return nil, ErrOrderNotFound
+		}
 		return nil, fmt.Errorf("order service: update address: %w", err)
 	}
 
@@ -136,7 +139,6 @@ func (o *orderServiceImpl) FindAll(ctx context.Context) ([]*web.OrderResponse, e
 				ProductID: op.ProductID,
 				Product: web.ProductInfo{
 					Name:        op.Product.Name,
-					Price:       op.Product.Price,
 					Description: op.Product.Description,
 					Image:       op.Product.Image,
 				},
@@ -177,13 +179,23 @@ func (o *orderServiceImpl) ConfirmOrder(ctx context.Context, req *web.OrderUpdat
 		return nil, ErrorValidation
 	}
 
-	result, err := o.OrderRepository.ConfirmOrder(ctx, req.ID, req.StatusOrder, req.StatusDelivery)
+	order := entity.Order{}
+
+	if req.StatusOrder != nil {
+		order.StatusOrder = *req.StatusOrder
+	}
+
+	if req.StatusDelivery != nil {
+		order.StatusDelivery = *req.StatusDelivery
+	}
+
+	result, err := o.OrderRepository.ConfirmOrder(ctx, req.ID, &order)
 	if err != nil {
 		if errors.Is(err, repository.ErrOrderNotFound) {
 			return nil, ErrOrderNotFound
 		}
 		return nil, fmt.Errorf("order service: find id order confirm: %w", err)
-	}	
+	}
 
 	response := helper.ToOrderResponse(result)
 	return response, nil

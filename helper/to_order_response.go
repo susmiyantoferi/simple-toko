@@ -14,7 +14,6 @@ func ToOrderResponse(o *entity.Order) *web.OrderResponse {
 			ProductID: v.ProductID,
 			Product: web.ProductInfo{
 				Name:        v.Product.Name,
-				Price:       v.Product.Price,
 				Description: v.Product.Description,
 				Image:       v.Product.Image,
 			},

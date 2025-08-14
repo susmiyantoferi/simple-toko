@@ -47,10 +47,14 @@ func (o *orderRepositoryImpl) CreateOrder(ctx context.Context, order *entity.Ord
 		order.StatusOrder = Waiting
 		order.StatusDelivery = Waiting
 
-		if err := tx.Omit("OrderProducts").Create(order).Error; err != nil {
+		var address entity.Address
+		if err := tx.WithContext(ctx).First(&address, order.AddressID).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return ErrAddressNotFound
 			}
+		}
+
+		if err := tx.Omit("OrderProducts").Create(order).Error; err != nil {
 			return fmt.Errorf("create order: %w", err)
 		}
 
@@ -110,9 +114,7 @@ func (o *orderRepositoryImpl) CreateOrder(ctx context.Context, order *entity.Ord
 }
 
 func (o *orderRepositoryImpl) UpdateAddress(ctx context.Context, order *entity.Order) (*entity.Order, error) {
-	data := entity.Order{
-		AddressID: order.AddressID,
-	}
+	newAddress := order.AddressID
 
 	if err := o.Db.WithContext(ctx).Where("status_order = ? AND id = ?", Waiting, order.ID).First(order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -121,7 +123,19 @@ func (o *orderRepositoryImpl) UpdateAddress(ctx context.Context, order *entity.O
 		return nil, fmt.Errorf("order repo: find id update: %w", err)
 	}
 
-	if err := o.Db.WithContext(ctx).Model(order).Select("address_id").Updates(data).Error; err != nil {
+	var adrs entity.Address
+	if err := o.Db.WithContext(ctx).First(&adrs, newAddress).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrAddressNotFound
+		}
+		return nil, fmt.Errorf("order repo: find id address update: %w", err)
+	}
+
+	updateDta := map[string]interface{}{
+		"address_id": newAddress,
+	}
+
+	if err := o.Db.WithContext(ctx).Model(order).Select("address_id").Updates(updateDta).Error; err != nil {
 		return nil, fmt.Errorf("order repo: update: %w", err)
 	}
 
@@ -190,21 +204,23 @@ func (o *orderRepositoryImpl) FindByOrderId(ctx context.Context, orderId uint) (
 	return order, nil
 }
 
+func (o *orderRepositoryImpl) ConfirmOrder(ctx context.Context, orderId uint, order *entity.Order) (*entity.Order, error) {
+	data := map[string]interface{}{}
 
-func (o *orderRepositoryImpl) ConfirmOrder(ctx context.Context, orderId uint, statusOrder, statusDeliv string) (*entity.Order, error) {
-	var order entity.Order
+	if order.StatusOrder != "" {
+		data["status_order"] = order.StatusOrder
+	}
 
-	if err := o.Db.WithContext(ctx).Where("id = ? AND status_order = ?", orderId, Waiting).
+	if order.StatusDelivery != "" {
+		data["status_delivery"] = order.StatusDelivery
+	}
+
+	if err := o.Db.WithContext(ctx).Where("id = ? AND (status_order = ? OR status_order = ?)", orderId, Waiting, Confirmed).
 		First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrOrderNotFound
 		}
 		return nil, fmt.Errorf("order repo: confirm order find id: %w", err)
-	}
-
-	data := entity.Order{
-		StatusOrder:    statusOrder,
-		StatusDelivery: statusDeliv,
 	}
 
 	if err := o.Db.WithContext(ctx).Model(&order).Select("status_order", "status_delivery").
@@ -218,7 +234,7 @@ func (o *orderRepositoryImpl) ConfirmOrder(ctx context.Context, orderId uint, st
 		return nil, fmt.Errorf("order repo: preload order confirm: %w", err)
 	}
 
-	return &order, nil
+	return order, nil
 }
 
 //func (o *orderRepositoryImpl) AddOrderItem(ctx context.Context, orderId uint, item *entity.OrderProduct) (*entity.Order, error) {

@@ -36,7 +36,7 @@ func (o *orderHandlerImpl) CreateOrder(ctx *gin.Context) {
 			helper.ToResponseJson(ctx, http.StatusBadRequest, "invalid input", err.Error())
 			return
 		case errors.Is(err, service.ErrAddressNotFound):
-			helper.ToResponseJson(ctx, http.StatusNotFound, "adress not found", err.Error())
+			helper.ToResponseJson(ctx, http.StatusNotFound, "address not found", err.Error())
 			return
 		case errors.Is(err, service.ErrProductNotFound):
 			helper.ToResponseJson(ctx, http.StatusNotFound, "product not found", err.Error())
@@ -45,7 +45,7 @@ func (o *orderHandlerImpl) CreateOrder(ctx *gin.Context) {
 			helper.ToResponseJson(ctx, http.StatusBadRequest, "stock not enough", err.Error())
 			return
 		default:
-			helper.ToResponseJson(ctx, http.StatusInternalServerError, "internal server error", nil)
+			helper.ToResponseJson(ctx, http.StatusInternalServerError, "internal server error", err.Error())
 			return
 		}
 	}
@@ -166,6 +166,9 @@ func (o *orderHandlerImpl) ConfirmOrder(ctx *gin.Context) {
 		switch {
 		case errors.Is(err, service.ErrOrderNotFound):
 			helper.ToResponseJson(ctx, http.StatusNotFound, "orders not found", err.Error())
+			return
+		case errors.Is(err, service.ErrorValidation):
+			helper.ToResponseJson(ctx, http.StatusBadRequest, "invalid input", err.Error())
 			return
 		default:
 			helper.ToResponseJson(ctx, http.StatusInternalServerError, "internal server error", err.Error())
