@@ -17,15 +17,17 @@ func NewUserRepositoryImpl(db *gorm.DB) *userRepositoryImpl {
 	return &userRepositoryImpl{Db: db}
 }
 
-var ErrorIdNotFound = errors.New("id not found")
-var ErrorEmailNotFound = errors.New("email not found")
-var ErrorEmailExist = errors.New("email already exist")
-var ErrNotEnoughStock = errors.New("not enough stock")
-var ErrorValidation = errors.New("validation failed")
+var (
+	ErrorIdNotFound    = errors.New("id not found")
+	ErrorEmailNotFound = errors.New("email not found")
+	ErrorEmailExist    = errors.New("email already exist")
+	ErrNotEnoughStock  = errors.New("not enough stock")
+	ErrorValidation    = errors.New("validation failed")
+)
 
 func (r *userRepositoryImpl) Create(ctx context.Context, user *entity.User) (*entity.User, error) {
 	if err := r.Db.WithContext(ctx).Create(user).Error; err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey){
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return nil, ErrorEmailExist
 		}
 		return nil, fmt.Errorf("user repo: create: %w", err)
@@ -107,7 +109,7 @@ func (r *userRepositoryImpl) FindAll(ctx context.Context) ([]*entity.User, error
 	var user []*entity.User
 	result := r.Db.WithContext(ctx).Find(&user)
 	if result.Error != nil {
-		
+
 		return nil, fmt.Errorf("user repo: find all: %w", result.Error)
 	}
 

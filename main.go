@@ -36,7 +36,11 @@ func main() {
 	productService := service.NewProductServiceImpl(productRepo, inventoryRepo, validate)
 	productHandler := handler.NewProductHandlerImpl(productService)
 
-	router := route.NewRouter(userHandler, inventoryHandler, addressHandler, productHandler)
+	orderRepo := repository.NewOrderRepositoryImpl(db)
+	orderService := service.NewOrderServiceImpl(orderRepo, validate)
+	orderHandler := handler.NewOrderHandlerImpl(orderService)
+
+	router := route.NewRouter(userHandler, inventoryHandler, addressHandler, productHandler, orderHandler)
 
 	port := os.Getenv("PORT_APP")
 	log.Println("server run in port ", port)

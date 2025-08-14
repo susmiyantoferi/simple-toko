@@ -8,10 +8,10 @@ import (
 
 type OrderProduct struct {
 	ID        uint           `gorm:"primaryKey;autoIncrement"`
-	OrderID   uint           `gorm:"notnull"`
-	Order     Order          `gorm:"foreignKey:OrderID;references:ID"`
-	ProductID uint           `gorm:"notnull"`
-	Product   Product        `gorm:"foreignKey:ProductID;references:ID"`
+	OrderID   uint           `gorm:"notnull;uniqueIndex:idx_order_product"`
+	Order     Order          `gorm:"foreignKey:OrderID;references:ID;OnDelete:RESTRICT;"`
+	ProductID uint           `gorm:"notnull;uniqueIndex:idx_order_product"`
+	Product   Product        `gorm:"foreignKey:ProductID;references:ID;OnDelete:RESTRICT;"`
 	Qty       int            `gorm:"notnull"`
 	UnitPrice float64        `gorm:"notnull"`
 	CreatedAt time.Time      `gorm:"notnull"`

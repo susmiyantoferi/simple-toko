@@ -1,0 +1,277 @@
+package repository
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"simple-toko/entity"
+
+	"gorm.io/gorm"
+)
+
+type orderRepositoryImpl struct {
+	Db *gorm.DB
+}
+
+func NewOrderRepositoryImpl(db *gorm.DB) *orderRepositoryImpl {
+	return &orderRepositoryImpl{
+		Db: db,
+	}
+}
+
+const (
+	Waiting   string = "waiting"
+	Confirmed string = "confirmed"
+	Canceled  string = "canceled"
+	OnProcess string = "on process"
+	Delivered string = "delivered"
+)
+
+var (
+	ErrEmptyItems      = errors.New("order has no items")
+	ErrProductNotFound = errors.New("product not found")
+	ErrOrderNotFound   = errors.New("order not found")
+	ErrAddressNotFound = errors.New("address not found")
+)
+
+func (o *orderRepositoryImpl) CreateOrder(ctx context.Context, order *entity.Order) (*entity.Order, error) {
+	if order == nil {
+		return nil, fmt.Errorf("nil order")
+	}
+
+	if len(order.OrderProducts) == 0 {
+		return nil, ErrEmptyItems
+	}
+
+	err := o.Db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		order.StatusOrder = Waiting
+		order.StatusDelivery = Waiting
+
+		if err := tx.Omit("OrderProducts").Create(order).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrAddressNotFound
+			}
+			return fmt.Errorf("create order: %w", err)
+		}
+
+		//create data on table pivot
+		for i := range order.OrderProducts {
+			item := &order.OrderProducts[i]
+			item.OrderID = order.ID
+
+			var p entity.Product
+			if err := tx.Select("id, price").First(&p, item.ProductID).Error; err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return ErrProductNotFound
+				}
+				return fmt.Errorf("find product: %w", err)
+			}
+			item.UnitPrice = p.Price
+
+			//reduce stock
+			stock := tx.Model(&entity.Product{}).Where("id = ? AND stock >= ?", item.ProductID, item.Qty).
+				UpdateColumn("stock", gorm.Expr("stock - ?", item.Qty))
+			if stock.Error != nil {
+				return fmt.Errorf("reduce stock: %w", stock.Error)
+			}
+
+			if stock.RowsAffected == 0 {
+				return ErrNotEnoughStock
+			}
+		}
+
+		if err := tx.Create(&order.OrderProducts).Error; err != nil {
+			return fmt.Errorf("crate order item: %w", err)
+		}
+
+		amountPay := 0.0
+		for _, v := range order.OrderProducts {
+			amountPay += v.UnitPrice * float64(v.Qty)
+		}
+
+		if err := tx.Model(order).Update("amount_pay", amountPay).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err := o.Db.WithContext(ctx).
+		Preload("OrderProducts").Preload("OrderProducts.Product").Preload("User").
+		Preload("Address").First(order, order.ID).Error; err != nil {
+		return nil, fmt.Errorf("order repo: preload order: %w", err)
+	}
+
+	return order, nil
+}
+
+func (o *orderRepositoryImpl) UpdateAddress(ctx context.Context, order *entity.Order) (*entity.Order, error) {
+	data := entity.Order{
+		AddressID: order.AddressID,
+	}
+
+	if err := o.Db.WithContext(ctx).Where("status_order = ? AND id = ?", Waiting, order.ID).First(order).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrOrderNotFound
+		}
+		return nil, fmt.Errorf("order repo: find id update: %w", err)
+	}
+
+	if err := o.Db.WithContext(ctx).Model(order).Select("address_id").Updates(data).Error; err != nil {
+		return nil, fmt.Errorf("order repo: update: %w", err)
+	}
+
+	if err := o.Db.WithContext(ctx).
+		Preload("OrderProducts").Preload("OrderProducts.Product").Preload("User").
+		Preload("Address").First(order, order.ID).Error; err != nil {
+		return nil, fmt.Errorf("order repo: preload order: %w", err)
+	}
+
+	return order, nil
+}
+
+func (o *orderRepositoryImpl) Delete(ctx context.Context, id uint) error {
+	order := entity.Order{}
+
+	result := o.Db.WithContext(ctx).Delete(&order, id)
+	if result.Error != nil {
+		return fmt.Errorf("order repo: delete: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return ErrorIdNotFound
+	}
+
+	return nil
+
+}
+
+func (o *orderRepositoryImpl) FindById(ctx context.Context, id uint) (*entity.Order, error) {
+	order := entity.Order{}
+
+	if err := o.Db.WithContext(ctx).Preload("OrderProducts").Preload("User").
+		Preload("Address").Preload("OrderProducts.Product").
+		First(&order, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrOrderNotFound
+		}
+		return nil, fmt.Errorf("order repo: find by id: %w", err)
+	}
+
+	return &order, nil
+}
+
+func (o *orderRepositoryImpl) FindAll(ctx context.Context) ([]*entity.Order, error) {
+	var order []*entity.Order
+
+	if err := o.Db.WithContext(ctx).Preload("OrderProducts").Preload("OrderProducts.Product").
+		Preload("User").Preload("Address").Find(&order).Error; err != nil {
+		return nil, fmt.Errorf("order repo: find all: %w", err)
+	}
+
+	return order, nil
+}
+
+func (o *orderRepositoryImpl) FindByOrderId(ctx context.Context, orderId uint) ([]*entity.OrderProduct, error) {
+	var order []*entity.OrderProduct
+
+	if err := o.Db.WithContext(ctx).Preload("Order").Preload("Product").
+		First(&order, orderId).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrorIdNotFound
+		}
+		return nil, fmt.Errorf("order repo: find by user id: %w", err)
+	}
+
+	return order, nil
+}
+
+
+func (o *orderRepositoryImpl) ConfirmOrder(ctx context.Context, orderId uint, statusOrder, statusDeliv string) (*entity.Order, error) {
+	var order entity.Order
+
+	if err := o.Db.WithContext(ctx).Where("id = ? AND status_order = ?", orderId, Waiting).
+		First(&order).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrOrderNotFound
+		}
+		return nil, fmt.Errorf("order repo: confirm order find id: %w", err)
+	}
+
+	data := entity.Order{
+		StatusOrder:    statusOrder,
+		StatusDelivery: statusDeliv,
+	}
+
+	if err := o.Db.WithContext(ctx).Model(&order).Select("status_order", "status_delivery").
+		Updates(data).Error; err != nil {
+		return nil, fmt.Errorf("order repo: confirm order: %w", err)
+	}
+
+	if err := o.Db.WithContext(ctx).
+		Preload("OrderProducts").Preload("OrderProducts.Product").
+		Preload("User").Preload("Address").First(&order, orderId).Error; err != nil {
+		return nil, fmt.Errorf("order repo: preload order confirm: %w", err)
+	}
+
+	return &order, nil
+}
+
+//func (o *orderRepositoryImpl) AddOrderItem(ctx context.Context, orderId uint, item *entity.OrderProduct) (*entity.Order, error) {
+// 	var order entity.Order
+
+// 	err := o.Db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+
+// 		if err := tx.First(&order, orderId).Error; err != nil {
+// 			if errors.Is(err, gorm.ErrRecordNotFound) {
+// 				return ErrOrderNotFound
+// 			}
+// 			return fmt.Errorf("add item repo: find order: %w", err)
+// 		}
+
+// 		var p entity.Product
+// 		if err := tx.First(&p, item.ProductID).Error; err != nil {
+// 			if errors.Is(err, gorm.ErrRecordNotFound) {
+// 				return ErrProductNotFound
+// 			}
+// 			return fmt.Errorf("add item repo: find product: %w", err)
+// 		}
+
+// 		item.UnitPrice = p.Price
+// 		item.OrderID = orderId
+
+// 		if err := tx.Create(item).Error; err != nil {
+// 			return err
+// 		}
+
+// 		newAmount := order.AmountPay + (item.UnitPrice * float64(item.Qty))
+// 		if err := tx.Model(&order).Update("amount_pay", newAmount).Error; err != nil {
+// 			return err
+// 		}
+
+// 		if err := tx.Preload("OrderProduct").First(&order, orderId).Error; err != nil {
+// 			return err
+// 		}
+
+// 		return nil
+
+// 	})
+
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	return &order, nil
+// }
+
+// func (o *orderRepositoryImpl) RemoveOrderItem(ctx context.Context, orderId, productId uint) (*entity.Order, error) {
+
+// }
+
+// func (o *orderRepositoryImpl) UpdateOrderQty(ctx context.Context, orderId, productId uint, qty int) (*entity.Order, error) {
+
+// }

@@ -11,6 +11,7 @@ func NewRouter(
 	InventHandler handler.InventoryHandler,
 	AddressHandler handler.AddressHandler,
 	ProductHandler handler.ProductHandler,
+	OrderHandler handler.OrderHandler,
 ) *gin.Engine {
 	router := gin.Default()
 
@@ -45,6 +46,13 @@ func NewRouter(
 		api.PUT("product/:productId/reduce", ProductHandler.ReduceStock)
 		api.PUT("product/image/:productId", ProductHandler.UpdateImage)
 		api.GET("product/image/:productId", ProductHandler.PreviewImage)
+
+		api.POST("order", OrderHandler.CreateOrder)
+		api.PUT("order/address/:orderId", OrderHandler.UpdateAddress)
+		api.DELETE("order/:orderId", OrderHandler.Delete)
+		api.GET("order/:orderId", OrderHandler.FindById)
+		api.GET("order", OrderHandler.FindAll)
+		api.PUT("order/confirm/:orderId", OrderHandler.ConfirmOrder)
 
 	}
 
