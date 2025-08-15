@@ -1,0 +1,16 @@
+package repository
+
+import (
+	"context"
+	"simple-toko/entity"
+)
+
+type PaymentRepository interface {
+	UploadPayment(ctx context.Context, pym *entity.Payment) (*entity.Payment, error)
+	UpdateStatus(ctx context.Context, pym *entity.Payment) (*entity.Payment, error)
+	FindById(ctx context.Context, id uint) (*entity.Payment, error)
+	FindByOrderId(ctx context.Context, orderId uint) (*entity.Payment, error)
+	FindAll(ctx context.Context) ([]*entity.Payment, error)
+	Delete(ctx context.Context, id uint) error
+	//UpdatePayment(ctx context.Context, pym *entity.Payment) (*entity.Payment, error)
+}

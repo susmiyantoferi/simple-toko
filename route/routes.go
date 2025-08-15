@@ -12,6 +12,7 @@ func NewRouter(
 	AddressHandler handler.AddressHandler,
 	ProductHandler handler.ProductHandler,
 	OrderHandler handler.OrderHandler,
+	PaymentHandler handler.PaymentHandler,
 ) *gin.Engine {
 	router := gin.Default()
 
@@ -53,6 +54,14 @@ func NewRouter(
 		api.GET("order/:id", OrderHandler.FindById)
 		api.GET("order", OrderHandler.FindAll)
 		api.PUT("order/confirm/:id", OrderHandler.ConfirmOrder)
+
+		api.POST("payment", PaymentHandler.UploadPayment)
+		api.PUT("payment/status/:orderId", PaymentHandler.UpdateStatus)
+		api.GET("payment/:id", PaymentHandler.FindById)
+		api.GET("payment/order/:orderId", PaymentHandler.FindByOrderId)
+		api.GET("payment", PaymentHandler.FindAll)
+		api.DELETE("payment/:id", PaymentHandler.Delete)
+		api.GET("payment/image/:orderId", PaymentHandler.PreviewImage)
 
 	}
 

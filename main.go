@@ -17,6 +17,10 @@ func main() {
 		log.Fatal("failed make folder product")
 	}
 
+	if err := os.MkdirAll("uploads/payment/", os.ModePerm); err != nil {
+		log.Fatal("failed make folder payment")
+	}
+
 	db := config.Database()
 	validate := validator.New()
 
@@ -40,7 +44,18 @@ func main() {
 	orderService := service.NewOrderServiceImpl(orderRepo, validate)
 	orderHandler := handler.NewOrderHandlerImpl(orderService)
 
-	router := route.NewRouter(userHandler, inventoryHandler, addressHandler, productHandler, orderHandler)
+	payRepo := repository.NewPaymentRepositoryImpl(db)
+	payService := service.NewPaymentServiceImpl(payRepo, orderRepo, validate)
+	payHandler := handler.NewPaymentHandlerImpl(payService)
+
+	router := route.NewRouter(
+		userHandler,
+		inventoryHandler,
+		addressHandler,
+		productHandler,
+		orderHandler,
+		payHandler,
+	)
 
 	port := os.Getenv("PORT_APP")
 	log.Println("server run in port ", port)
