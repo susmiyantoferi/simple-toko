@@ -3,12 +3,16 @@ package service
 import (
 	"errors"
 	"fmt"
+	"os"
 	"simple-toko/entity"
 	"simple-toko/helper"
 	"simple-toko/repository"
 	"simple-toko/utils"
+	token "simple-toko/web"
 	web "simple-toko/web/user"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"golang.org/x/net/context"
@@ -27,6 +31,8 @@ func NewUserServiceImpl(userRepository repository.UserRepository, validate *vali
 }
 
 var ErrorIdNotFound = errors.New("id not found")
+var ErrFailedLogin = errors.New("email or password wrong")
+var ErrInvalidToken = errors.New("invalid token refresh")
 var ErrorEmailNotFound = errors.New("email not found")
 var ErrorEmailExist = errors.New("email already exist")
 var ErrorValidation = errors.New("validation failed")
@@ -195,4 +201,80 @@ func (r *userServiceImpl) CreateAdmin(ctx context.Context, req *web.UserCreateRe
 
 	return response, nil
 
+}
+
+func (r *userServiceImpl) Login(ctx context.Context, req *web.UserLoginRequest) (*token.TokenResponse, error) {
+	if err := r.Validate.Struct(req); err != nil {
+		return nil, ErrorValidation
+	}
+
+	user, err := r.UserRepository.FindByEmail(ctx, req.Email)
+	if err != nil {
+		if errors.Is(err, repository.ErrorEmailNotFound) {
+			return nil, ErrFailedLogin
+		}
+		return nil, fmt.Errorf("user service: login, find email: %w", err)
+	}
+
+	if !utils.CompareHashPassword(user.Password, req.Password) {
+		return nil, ErrFailedLogin
+	}
+
+	tokenExp, _ := strconv.Atoi(os.Getenv("JWT_EXPIRED"))
+
+	accessToken, err := utils.GenerateToken(user.ID, user.Name, user.Email, user.Role, time.Duration(tokenExp))
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	refreshToken, err := utils.GenerateToken(user.ID, user.Name, user.Email, user.Role, time.Duration(tokenExp*2))
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	createdToken := &token.TokenResponse{
+		Username:     user.Name,
+		Token:        accessToken,
+		TokenRefresh: refreshToken,
+		TokenType:    "Bearer",
+		ExipresIn:    tokenExp * 3600,
+	}
+
+	return createdToken, nil
+
+}
+
+func (r *userServiceImpl) RefreshToken(ctx context.Context, req *web.UserRefreshTokenRequest) (*token.TokenResponse, error) {
+	if err := r.Validate.Struct(req); err != nil {
+		return nil, ErrorValidation
+	}
+
+	tokenClaims, err := utils.ClaimTokenRefresh(req.TokenRefresh)
+	if err != nil {
+		return nil, ErrInvalidToken
+	}
+
+	user, err := r.UserRepository.FindById(ctx, tokenClaims.UserID)
+	if err != nil {
+		if errors.Is(err, repository.ErrorIdNotFound) {
+			return nil, ErrorIdNotFound
+		}
+		return nil, fmt.Errorf("user service: refresh token, find user: %w", err)
+	}
+
+	tokenExp, _ := strconv.Atoi(os.Getenv("JWT_EXPIRED"))
+
+	accessToken, err := utils.GenerateToken(user.ID, user.Name, user.Email, user.Role, time.Duration(tokenExp)) //expired in 24 hour
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	createdToken := &token.TokenResponse{
+		Username:  tokenClaims.Username,
+		Token:     accessToken,
+		TokenType: "Bearer",
+		ExipresIn: tokenExp * 3600,
+	}
+
+	return createdToken, nil
 }

@@ -2,6 +2,7 @@ package route
 
 import (
 	"simple-toko/handler"
+	"simple-toko/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,52 +17,78 @@ func NewRouter(
 ) *gin.Engine {
 	router := gin.Default()
 
-	api := router.Group("/api/")
+	regist := router.Group("/api/v1/")
 	{
-		api.POST("users", UserHandler.Create)
-		api.POST("users/admin", UserHandler.CreateAdmin)
-		api.PUT("users/:userId", UserHandler.Update)
-		api.DELETE("users/:userId", UserHandler.Delete)
-		api.GET("users/id/:userId", UserHandler.FindById)
-		api.GET("users/email/:email", UserHandler.FindByEmail)
-		api.GET("users", UserHandler.FindAll)
+		regist.POST("register", UserHandler.Create)
+		regist.POST("login", UserHandler.Login)
+		regist.POST("refresh-token", UserHandler.RefreshToken)
+	}
 
-		api.POST("inventory", InventHandler.Create)
-		api.PUT("inventory/:invId", InventHandler.Update)
-		api.DELETE("inventory/:invId", InventHandler.Delete)
-		api.GET("inventory/:invId", InventHandler.FindById)
-		api.GET("inventory", InventHandler.FindAll)
+	api := router.Group("/api/v1")
+	api.Use(middleware.Authentication())
+	{
+		admin := api.Group("/")
+		admin.Use(middleware.RoleAccessMiddleware("admin"))
+		{
+			//user
 
-		api.POST("address", AddressHandler.Create)
-		api.PUT("address/:id/user/:userId", AddressHandler.Update)
-		api.DELETE("address/:id", AddressHandler.Delete)
-		api.GET("address/user/:userId", AddressHandler.FindByUserId)
-		api.GET("address", AddressHandler.FindAll)
+			admin.DELETE("users/:userId", UserHandler.Delete)
+			admin.GET("users/id/:userId", UserHandler.FindById)
+			admin.GET("users/email/:email", UserHandler.FindByEmail)
+			regist.POST("users/admin", UserHandler.CreateAdmin)
 
-		api.POST("product", ProductHandler.Create)
-		api.PUT("product/:productId", ProductHandler.Update)
-		api.DELETE("product/:productId", ProductHandler.Delete)
-		api.GET("product/:productId", ProductHandler.FindById)
-		api.GET("product", ProductHandler.FindAll)
-		api.PUT("product/:productId/add", ProductHandler.AddStock)
-		api.PUT("product/:productId/reduce", ProductHandler.ReduceStock)
-		api.PUT("product/image/:productId", ProductHandler.UpdateImage)
-		api.GET("product/image/:productId", ProductHandler.PreviewImage)
+			//address
+			admin.GET("address", AddressHandler.FindAll)
 
-		api.POST("order", OrderHandler.CreateOrder)
-		api.PUT("order/address/:id", OrderHandler.UpdateAddress)
-		api.DELETE("order/:id", OrderHandler.Delete)
-		api.GET("order/:id", OrderHandler.FindById)
-		api.GET("order", OrderHandler.FindAll)
-		api.PUT("order/confirm/:id", OrderHandler.ConfirmOrder)
+			//inventory
+			admin.POST("inventory", InventHandler.Create)
+			admin.PUT("inventory/:invId", InventHandler.Update)
+			admin.DELETE("inventory/:invId", InventHandler.Delete)
+			admin.GET("inventory/:invId", InventHandler.FindById)
+			admin.GET("inventory", InventHandler.FindAll)
 
-		api.POST("payment", PaymentHandler.UploadPayment)
-		api.PUT("payment/status/:orderId", PaymentHandler.UpdateStatus)
-		api.GET("payment/:id", PaymentHandler.FindById)
-		api.GET("payment/order/:orderId", PaymentHandler.FindByOrderId)
-		api.GET("payment", PaymentHandler.FindAll)
-		api.DELETE("payment/:id", PaymentHandler.Delete)
-		api.GET("payment/image/:orderId", PaymentHandler.PreviewImage)
+			//product
+			admin.POST("product", ProductHandler.Create)
+			admin.PUT("product/:productId", ProductHandler.Update)
+			admin.DELETE("product/:productId", ProductHandler.Delete)
+			admin.GET("product/:productId", ProductHandler.FindById)
+			admin.GET("product", ProductHandler.FindAll)
+			admin.PUT("product/:productId/add", ProductHandler.AddStock)
+			admin.PUT("product/:productId/reduce", ProductHandler.ReduceStock)
+			admin.PUT("product/image/:productId", ProductHandler.UpdateImage)
+			admin.GET("product/image/:productId", ProductHandler.PreviewImage)
+
+			//orders
+			admin.GET("order", OrderHandler.FindAll)
+			admin.PUT("order/confirm/:id", OrderHandler.ConfirmOrder)
+			admin.DELETE("order/:id", OrderHandler.Delete)
+
+			//payments
+			admin.GET("payment", PaymentHandler.FindAll)
+			admin.DELETE("payment/:id", PaymentHandler.Delete)
+			admin.GET("payment/image/:orderId", PaymentHandler.PreviewImage)
+			admin.GET("payment/:id", PaymentHandler.FindById)
+			admin.PUT("payment/status/:orderId", PaymentHandler.UpdateStatus)
+		}
+
+		cust := api.Group("/")
+		cust.Use(middleware.RoleAccessMiddleware("customer", "admin"))
+		{
+			cust.PUT("users/:userId", UserHandler.Update)
+			cust.GET("users", UserHandler.FindAll)
+
+			cust.POST("address", AddressHandler.Create)
+			cust.PUT("address/:id/user/:userId", AddressHandler.Update)
+			cust.DELETE("address/:id", AddressHandler.Delete)
+			cust.GET("address/user/:userId", AddressHandler.FindByUserId)
+
+			cust.POST("order", OrderHandler.CreateOrder)
+			cust.PUT("order/address/:id", OrderHandler.UpdateAddress)
+			cust.GET("order/:id", OrderHandler.FindById)
+
+			cust.POST("payment", PaymentHandler.UploadPayment)
+			cust.GET("payment/order/:orderId", PaymentHandler.FindByOrderId)
+		}
 
 	}
 

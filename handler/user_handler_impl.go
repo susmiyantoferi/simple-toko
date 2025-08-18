@@ -179,3 +179,58 @@ func (h *userHandlerImpl) CreateAdmin(ctx *gin.Context) {
 
 	helper.ToResponseJson(ctx, http.StatusCreated, "created", result)
 }
+
+func (h *userHandlerImpl) Login(ctx *gin.Context) {
+	req := web.UserLoginRequest{}
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		helper.ToResponseJson(ctx, http.StatusBadRequest, "invalid request", err.Error())
+		return
+	}
+
+	result, err := h.UserService.Login(ctx, &req)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrorValidation):
+			helper.ToResponseJson(ctx, http.StatusBadRequest, "invalid input", err.Error())
+			return
+		case errors.Is(err, service.ErrFailedLogin):
+			helper.ToResponseJson(ctx, http.StatusUnauthorized, "email or password in correct", err.Error())
+			return
+		default:
+			helper.ToResponseJson(ctx, http.StatusInternalServerError, "internal server error", err.Error())
+			return
+		}
+	}
+
+	helper.ToResponseJson(ctx, http.StatusOK, "success", result)
+}
+
+func (h *userHandlerImpl) RefreshToken(ctx *gin.Context) {
+	req := web.UserRefreshTokenRequest{}
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		helper.ToResponseJson(ctx, http.StatusBadRequest, "invalid request", err.Error())
+		return
+	}
+
+	result, err := h.UserService.RefreshToken(ctx, &req)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrorValidation):
+			helper.ToResponseJson(ctx, http.StatusBadRequest, "invalid input", err.Error())
+			return
+		case errors.Is(err, service.ErrInvalidToken):
+			helper.ToResponseJson(ctx, http.StatusBadRequest, "invalid token input", err.Error())
+			return
+		case errors.Is(err, service.ErrorIdNotFound):
+			helper.ToResponseJson(ctx, http.StatusUnauthorized, "unauthorized", err.Error())
+			return
+		default:
+			helper.ToResponseJson(ctx, http.StatusInternalServerError, "internal server error", err.Error())
+			return
+		}
+	}
+
+	helper.ToResponseJson(ctx, http.StatusOK, "success", result)
+}

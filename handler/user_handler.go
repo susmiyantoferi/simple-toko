@@ -12,4 +12,6 @@ type UserHandler interface {
 	FindByEmail(ctx *gin.Context)
 	FindAll(ctx *gin.Context)
 	CreateAdmin(ctx *gin.Context)
+	Login(ctx *gin.Context)
+	RefreshToken(ctx *gin.Context)
 }
