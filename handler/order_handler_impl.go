@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"simple-toko/helper"
 	"simple-toko/service"
+	t "simple-toko/web"
 	web "simple-toko/web/order"
 	"strconv"
 
@@ -24,6 +25,11 @@ func NewOrderHandlerImpl(orderService service.OrderService) *orderHandlerImpl {
 func (o *orderHandlerImpl) CreateOrder(ctx *gin.Context) {
 	req := web.OrderCreateRequest{}
 
+	claims, _ := ctx.Get("user")
+	user := claims.(*t.TokenClaim)
+
+	req.UserID = user.UserID
+
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		helper.ToResponseJson(ctx, http.StatusBadRequest, "invalid request", err.Error())
 		return
@@ -32,6 +38,9 @@ func (o *orderHandlerImpl) CreateOrder(ctx *gin.Context) {
 	result, err := o.OrderService.CreateOrder(ctx, &req)
 	if err != nil {
 		switch {
+		case errors.Is(err, service.ErrInvalidAddress):
+			helper.ToResponseJson(ctx, http.StatusBadRequest, "cannot use address", err.Error())
+			return
 		case errors.Is(err, service.ErrorValidation):
 			helper.ToResponseJson(ctx, http.StatusBadRequest, "invalid input", err.Error())
 			return
@@ -73,6 +82,9 @@ func (o *orderHandlerImpl) UpdateAddress(ctx *gin.Context) {
 	result, err := o.OrderService.UpdateAddress(ctx, &req)
 	if err != nil {
 		switch {
+		case errors.Is(err, service.ErrInvalidAddress):
+			helper.ToResponseJson(ctx, http.StatusBadRequest, "cannot use address", err.Error())
+			return
 		case errors.Is(err, service.ErrorValidation):
 			helper.ToResponseJson(ctx, http.StatusBadRequest, "invalid input", err.Error())
 			return

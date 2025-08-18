@@ -15,12 +15,14 @@ import (
 
 type orderServiceImpl struct {
 	OrderRepository repository.OrderRepository
+	AddressRepostory repository.AddressRepository
 	Validate        *validator.Validate
 }
 
-func NewOrderServiceImpl(orderRepository repository.OrderRepository, validate *validator.Validate) *orderServiceImpl {
+func NewOrderServiceImpl(orderRepository repository.OrderRepository, addressRepostory repository.AddressRepository, validate *validator.Validate) *orderServiceImpl {
 	return &orderServiceImpl{
 		OrderRepository: orderRepository,
+		AddressRepostory: addressRepostory,
 		Validate:        validate,
 	}
 }
@@ -30,11 +32,17 @@ var (
 	ErrProductNotFound = errors.New("product not found")
 	ErrOrderNotFound   = errors.New("order not found")
 	ErrAddressNotFound = errors.New("address not found")
+	ErrInvalidAddress = errors.New("invalid input address")
 )
 
 func (o *orderServiceImpl) CreateOrder(ctx context.Context, req *web.OrderCreateRequest) (*web.OrderResponse, error) {
 	if err := o.Validate.Struct(req); err != nil {
 		return nil, ErrorValidation
+	}
+
+	_, err := o.AddressRepostory.FindByIdAndUserId(ctx, req.AddressID, req.UserID)
+	if err != nil {
+		return nil, ErrAddressNotFound
 	}
 
 	order := entity.Order{
@@ -52,9 +60,6 @@ func (o *orderServiceImpl) CreateOrder(ctx context.Context, req *web.OrderCreate
 
 	result, err := o.OrderRepository.CreateOrder(ctx, &order)
 	if err != nil {
-		if errors.Is(err, repository.ErrAddressNotFound) {
-			return nil, ErrAddressNotFound
-		}
 
 		if errors.Is(err, repository.ErrProductNotFound) {
 			return nil, ErrProductNotFound
@@ -85,13 +90,14 @@ func (o *orderServiceImpl) UpdateAddress(ctx context.Context, req *web.OrderUpda
 		return nil, fmt.Errorf("order service: find order update address: %w", err)
 	}
 
+	if _, err := o.AddressRepostory.FindByIdAndUserId(ctx, req.AddressID, order.UserID); err != nil {
+		return nil, ErrAddressNotFound
+	}
+
 	order.AddressID = req.AddressID
 
 	result, err := o.OrderRepository.UpdateAddress(ctx, order)
 	if err != nil {
-		if errors.Is(err, repository.ErrAddressNotFound) {
-			return nil, ErrAddressNotFound
-		}
 		if errors.Is(err, repository.ErrOrderNotFound) {
 			return nil, ErrOrderNotFound
 		}

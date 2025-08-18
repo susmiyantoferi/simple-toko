@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"simple-toko/helper"
 	"simple-toko/service"
+	t "simple-toko/web"
 	web "simple-toko/web/address"
 	"strconv"
 
@@ -23,6 +24,11 @@ func NewAddressHandlerImpl(addressService service.AddressService) *addressHandle
 
 func (a *addressHandlerImpl) Create(ctx *gin.Context) {
 	req := web.AddressCreateRequest{}
+
+	claims, _ := ctx.Get("user")
+	user := claims.(*t.TokenClaim)
+
+	req.UserID = user.UserID
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		helper.ToResponseJson(ctx, http.StatusBadRequest, "invalid request", err.Error())
@@ -61,15 +67,11 @@ func (a *addressHandlerImpl) Update(ctx *gin.Context) {
 		return
 	}
 
-	usrId := ctx.Param("userId")
-	userId, err := strconv.Atoi(usrId)
-	if err != nil {
-		helper.ToResponseJson(ctx, http.StatusBadRequest, "invalid input type id", nil)
-		return
-	}
+	claims, _ := ctx.Get("user")
+	user := claims.(*t.TokenClaim)
 
 	req.ID = uint(addressId)
-	req.UserID = uint(userId)
+	req.UserID = user.UserID
 
 	result, err := a.AddressService.Update(ctx, &req)
 	if err != nil {

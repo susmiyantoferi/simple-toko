@@ -41,7 +41,7 @@ func main() {
 	productHandler := handler.NewProductHandlerImpl(productService)
 
 	orderRepo := repository.NewOrderRepositoryImpl(db)
-	orderService := service.NewOrderServiceImpl(orderRepo, validate)
+	orderService := service.NewOrderServiceImpl(orderRepo, addresRepo, validate)
 	orderHandler := handler.NewOrderHandlerImpl(orderService)
 
 	payRepo := repository.NewPaymentRepositoryImpl(db)

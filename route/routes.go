@@ -78,12 +78,12 @@ func NewRouter(
 			cust.GET("users", UserHandler.FindAll)
 
 			cust.POST("address", AddressHandler.Create)
-			cust.PUT("address/:id/user/:userId", AddressHandler.Update)
+			cust.PUT("address/:id", AddressHandler.Update)
 			cust.DELETE("address/:id", AddressHandler.Delete)
 			cust.GET("address/user/:userId", AddressHandler.FindByUserId)
 
 			cust.POST("order", OrderHandler.CreateOrder)
-			cust.PUT("order/address/:id", OrderHandler.UpdateAddress)
+			cust.PUT("order/:id", OrderHandler.UpdateAddress)
 			cust.GET("order/:id", OrderHandler.FindById)
 
 			cust.POST("payment", PaymentHandler.UploadPayment)
