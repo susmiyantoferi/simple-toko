@@ -14,6 +14,7 @@ func NewRouter(
 	ProductHandler handler.ProductHandler,
 	OrderHandler handler.OrderHandler,
 	PaymentHandler handler.PaymentHandler,
+	ReportHandler handler.ReportHandler,
 ) *gin.Engine {
 	router := gin.Default()
 
@@ -69,6 +70,11 @@ func NewRouter(
 			admin.GET("payment/image/:orderId", PaymentHandler.PreviewImage)
 			admin.GET("payment/:id", PaymentHandler.FindById)
 			admin.PUT("payment/status/:orderId", PaymentHandler.UpdateStatus)
+
+			//reports
+			admin.GET("monthly-sales", ReportHandler.MonthlySales)
+			admin.GET("top-product", ReportHandler.TopProductSales)
+			admin.GET("less-product", ReportHandler.LessProductSales)
 		}
 
 		cust := api.Group("/")

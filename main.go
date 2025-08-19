@@ -48,6 +48,10 @@ func main() {
 	payService := service.NewPaymentServiceImpl(payRepo, orderRepo, validate)
 	payHandler := handler.NewPaymentHandlerImpl(payService)
 
+	reportRepo := repository.NewReportRepositoryImpl(db)
+	reportService := service.NewReportServiceImpl(reportRepo)
+	reportHndler := handler.NewReportHandlerImpl(reportService)
+
 	router := route.NewRouter(
 		userHandler,
 		inventoryHandler,
@@ -55,6 +59,7 @@ func main() {
 		productHandler,
 		orderHandler,
 		payHandler,
+		reportHndler,
 	)
 
 	port := os.Getenv("PORT_APP")
