@@ -6,7 +6,7 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-w" -o /goapp .
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-w" -o goapp .
 
 FROM debian:bookworm-slim
 WORKDIR /app
