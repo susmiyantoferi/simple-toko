@@ -9,14 +9,14 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
-	"github.com/joho/godotenv"
+	// "github.com/joho/godotenv"
 )
 
 func Database() *gorm.DB{
-	err := godotenv.Load()
-	if err != nil{
-		log.Fatal("error load env")
-	}
+	// err := godotenv.Load()
+	// if err != nil{
+	// 	log.Fatal("error load env")
+	// }
 
 	user := os.Getenv("DB_USERNAME")
 	pass := os.Getenv("DB_PASSWORD")
