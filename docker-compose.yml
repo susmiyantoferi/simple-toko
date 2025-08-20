@@ -1,0 +1,13 @@
+service :
+  app:
+    build: .
+    container_name: simple-toko-app
+    ports:
+     - "8003:8003"
+    env_file: 
+     - .env
+    volumes:
+     - ./uploads/product:/app/uploads/product
+     - ./uploads/payment:/app/uploads/payment
+    extra_hosts:
+     - "host.docker.internal:host-gateway"
