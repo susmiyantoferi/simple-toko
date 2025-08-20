@@ -16,6 +16,6 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /final-project/student3/
+            cd /home/student/final-project/student3/simple-toko/
             git pull origin main
             docker compose up -d --build
