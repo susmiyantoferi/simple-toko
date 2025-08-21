@@ -81,17 +81,23 @@ func (p *productRepositoryImpl) FindById(ctx context.Context, id uint) (*entity.
 	return &product, nil
 }
 
-func (p *productRepositoryImpl) FindAll(ctx context.Context, page, pageSize int) ([]*entity.Product, int64, error) {
+func (p *productRepositoryImpl) FindAll(ctx context.Context, page, pageSize int, search string) ([]*entity.Product, int64, error) {
 	var product []*entity.Product
 	var totalItems int64
 
-	if err := p.Db.WithContext(ctx).Model(&entity.Product{}).Count(&totalItems).Error; err != nil {
+	query := p.Db.WithContext(ctx).Model(&entity.Product{})
+
+	if search != ""{
+		query = query.Where("name LIKE ?", "%"+search+"%")
+	}
+
+	if err := query.Count(&totalItems).Error; err != nil {
 		return nil, 0, err
 	}
 
 	offset := (page - 1) * pageSize
 
-	if err := p.Db.WithContext(ctx).Preload("Inventory").Limit(pageSize).
+	if err := query.Preload("Inventory").Limit(pageSize).
 		Offset(offset).Find(&product).Error; err != nil {
 		return nil, 0, err
 	}

@@ -124,8 +124,8 @@ func (p *productServiceImpl) FindById(ctx context.Context, id uint) (*web.Produc
 	return response, nil
 }
 
-func (p *productServiceImpl) FindAll(ctx context.Context, page, pageSize int) (*pg.PaginatedResponse, error) {
-	result, totalItems, err := p.ProductRepo.FindAll(ctx, page, pageSize)
+func (p *productServiceImpl) FindAll(ctx context.Context, page, pageSize int, search string) (*pg.PaginatedResponse, error) {
+	result, totalItems, err := p.ProductRepo.FindAll(ctx, page, pageSize, search)
 	if err != nil {
 		return nil, fmt.Errorf("product service: find all: %w", err)
 	}

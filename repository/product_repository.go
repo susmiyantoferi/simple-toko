@@ -10,7 +10,7 @@ type ProductRepository interface {
 	Update(ctx context.Context, product *entity.Product) (*entity.Product, error)
 	Delete(ctx context.Context, id uint) error
 	FindById(ctx context.Context, id uint) (*entity.Product, error)
-	FindAll(ctx context.Context, page, pageSize int) ([]*entity.Product, int64, error)
+	FindAll(ctx context.Context, page, pageSize int, search string) ([]*entity.Product, int64, error)
 	AddStock(ctx context.Context, id uint, stock int) (*entity.Product, error)
 	ReduceStock(ctx context.Context, id uint, stock int) (*entity.Product, error)
 	UpdateImage(ctx context.Context, id uint, img string) (*entity.Product, error)

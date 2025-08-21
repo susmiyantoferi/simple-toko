@@ -130,6 +130,7 @@ func (p *productHandlerImpl) FindById(ctx *gin.Context) {
 func (p *productHandlerImpl) FindAll(ctx *gin.Context) {
 	pageStr := ctx.DefaultQuery("page", "1")
 	pageSizeStr := ctx.DefaultQuery("page_size", "5")
+	search := ctx.DefaultQuery("search", "")
 
 	page, err := strconv.Atoi(pageStr)
 	if err != nil || page < 1 {
@@ -141,7 +142,7 @@ func (p *productHandlerImpl) FindAll(ctx *gin.Context) {
 		pageSize = 5
 	}
 
-	result, err := p.ProductService.FindAll(ctx, page, pageSize)
+	result, err := p.ProductService.FindAll(ctx, page, pageSize, search)
 	if err != nil {
 		helper.ToResponseJson(ctx, http.StatusInternalServerError, "internal server error", err.Error())
 		return
