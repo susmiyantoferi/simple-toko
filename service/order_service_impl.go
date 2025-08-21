@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"simple-toko/entity"
 	"simple-toko/helper"
 	"simple-toko/repository"
+	pg "simple-toko/web"
 	adrs "simple-toko/web/address"
 	web "simple-toko/web/order"
 
@@ -131,8 +133,8 @@ func (o *orderServiceImpl) FindById(ctx context.Context, id uint) (*web.OrderRes
 	return response, nil
 }
 
-func (o *orderServiceImpl) FindAll(ctx context.Context) ([]*web.OrderResponse, error) {
-	result, err := o.OrderRepository.FindAll(ctx)
+func (o *orderServiceImpl) FindAll(ctx context.Context, page, pageSize int) (*pg.PaginatedResponse, error) {
+	result, totalItems, err := o.OrderRepository.FindAll(ctx, page, pageSize)
 	if err != nil {
 		return nil, fmt.Errorf("order service: find all order: %w", err)
 	}
@@ -173,7 +175,11 @@ func (o *orderServiceImpl) FindAll(ctx context.Context) ([]*web.OrderResponse, e
 		responses = append(responses, &response)
 	}
 
-	return responses, nil
+	totalPage := int(math.Ceil(float64(totalItems) / float64(pageSize)))
+
+	paginateResp := helper.ToPaginatedResponse(int64(page), totalPage, totalItems, responses)
+
+	return paginateResp, nil
 }
 
 // func (o orderServiceImpl) FindByOrderId(ctx context.Context, id uint) ([]*web.OrderResponse, error) {

@@ -10,6 +10,6 @@ type AddressRepository interface {
 	Update(ctx context.Context, addrss *entity.Address) (*entity.Address, error)
 	Delete(ctx context.Context, id uint) error
 	FindByUserId(ctx context.Context, userId uint) ([]*entity.Address, error)
-	FindAll(ctx context.Context) ([]*entity.Address, error)
+	FindAll(ctx context.Context, page, pageSize int) ([]*entity.Address, int64, error)
 	FindByIdAndUserId(ctx context.Context, id, usrId uint) (*entity.Address, error)
 }

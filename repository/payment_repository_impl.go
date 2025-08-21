@@ -90,13 +90,22 @@ func (pay *paymentRepositoryImpl) FindByOrderId(ctx context.Context, orderId uin
 	return &data, nil
 }
 
-func (pay *paymentRepositoryImpl) FindAll(ctx context.Context) ([]*entity.Payment, error) {
+func (pay *paymentRepositoryImpl) FindAll(ctx context.Context, page, pageSize int) ([]*entity.Payment, int64, error) {
 	var dataPay []*entity.Payment
-	if err := pay.Db.WithContext(ctx).Preload("Order").Find(&dataPay).Error; err != nil {
-		return nil, fmt.Errorf("payment repo: find all: %w", err)
+	var totalItems int64
+
+	if err := pay.Db.WithContext(ctx).Model(&entity.Payment{}).Count(&totalItems).Error; err != nil {
+		return nil, 0, err
 	}
 
-	return dataPay, nil
+	offset := (page - 1) * pageSize
+
+	if err := pay.Db.WithContext(ctx).Limit(pageSize).Offset(offset).
+		Preload("Order").Find(&dataPay).Error; err != nil {
+		return nil, 0, nil
+	}
+
+	return dataPay, totalItems, nil
 }
 
 func (pay *paymentRepositoryImpl) Delete(ctx context.Context, id uint) error {

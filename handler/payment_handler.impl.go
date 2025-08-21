@@ -149,7 +149,21 @@ func (pay *paymentHandlerImpl) FindByOrderId(ctx *gin.Context) {
 }
 
 func (pay *paymentHandlerImpl) FindAll(ctx *gin.Context) {
-	result, err := pay.PaymentService.FindAll(ctx)
+
+	pageStr := ctx.DefaultQuery("page", "1")
+	pageSizeStr := ctx.DefaultQuery("page_size", "5")
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil || pageSize < 1 {
+		pageSize = 5
+	}
+
+	result, err := pay.PaymentService.FindAll(ctx, page, pageSize)
 	if err != nil {
 		helper.ToResponseJson(ctx, http.StatusInternalServerError, "internal server error", err.Error())
 		return

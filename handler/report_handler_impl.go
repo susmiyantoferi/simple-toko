@@ -20,7 +20,20 @@ func NewReportHandlerImpl(reportService service.ReportService) *reportHandlerImp
 }
 
 func (r *reportHandlerImpl) MonthlySales(ctx *gin.Context) {
-	result, err := r.ReportService.MonthlySales(ctx)
+	pageStr := ctx.DefaultQuery("page", "1")
+	pageSizeStr := ctx.DefaultQuery("page_size", "5")
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	pageSize, err:= strconv.Atoi(pageSizeStr)
+	if err != nil || pageSize < 1{
+		pageSize = 5
+	}
+
+	result, err := r.ReportService.MonthlySales(ctx, page, pageSize)
 	if err != nil {
 		helper.ToResponseJson(ctx, http.StatusInternalServerError, "internal server error", nil)
 		return

@@ -179,15 +179,23 @@ func (o *orderRepositoryImpl) FindById(ctx context.Context, id uint) (*entity.Or
 	return &order, nil
 }
 
-func (o *orderRepositoryImpl) FindAll(ctx context.Context) ([]*entity.Order, error) {
+func (o *orderRepositoryImpl) FindAll(ctx context.Context, page, pageSize int) ([]*entity.Order, int64, error) {
 	var order []*entity.Order
+	var totalItems int64
 
-	if err := o.Db.WithContext(ctx).Preload("OrderProducts").Preload("OrderProducts.Product").
-		Preload("User").Preload("Address").Find(&order).Error; err != nil {
-		return nil, fmt.Errorf("order repo: find all: %w", err)
+	if err := o.Db.WithContext(ctx).Model(&entity.Order{}).Count(&totalItems).Error; err != nil {
+		return nil, 0, err
 	}
 
-	return order, nil
+	offset := (page - 1) * pageSize
+
+	if err := o.Db.WithContext(ctx).Limit(pageSize).Offset(offset).Preload("OrderProducts").
+		Preload("OrderProducts.Product").Preload("User").
+		Preload("Address").Find(&order).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return order, totalItems, nil
 }
 
 func (o *orderRepositoryImpl) FindByOrderId(ctx context.Context, orderId uint) ([]*entity.OrderProduct, error) {

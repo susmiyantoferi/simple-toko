@@ -3,8 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"math"
 	"simple-toko/entity"
+	"simple-toko/helper"
 	"simple-toko/repository"
+	"simple-toko/web"
 )
 
 type reportServiceImpl struct {
@@ -17,8 +20,8 @@ func NewReportServiceImpl(reportRepository repository.ReportRepository) *reportS
 	}
 }
 
-func (r *reportServiceImpl) MonthlySales(ctx context.Context) ([]*entity.SalesReport, error) {
-	result, err := r.ReportRepository.MonthlySales(ctx)
+func (r *reportServiceImpl) MonthlySales(ctx context.Context, page, pageSize int) (*web.PaginatedResponse, error) {
+	result, totalItems, err := r.ReportRepository.MonthlySales(ctx, page, pageSize)
 	if err != nil {
 		return nil, fmt.Errorf("report service: monthly sales: %w", err)
 	}
@@ -33,7 +36,11 @@ func (r *reportServiceImpl) MonthlySales(ctx context.Context) ([]*entity.SalesRe
 		responses = append(responses, &response)
 	}
 
-	return responses, nil
+	totalPage := int(math.Ceil(float64(totalItems) / float64(pageSize)))
+
+	paginateResp := helper.ToPaginatedResponse(int64(page), totalPage, totalItems, responses)
+	
+	return paginateResp, nil
 }
 
 func (r *reportServiceImpl) TopProductSales(ctx context.Context, limit int) ([]*entity.TopProduct, error) {

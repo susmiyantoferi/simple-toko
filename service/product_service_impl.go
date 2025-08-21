@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"simple-toko/entity"
 	"simple-toko/helper"
 	"simple-toko/repository"
+	pg "simple-toko/web"
 	web "simple-toko/web/product"
 
 	"github.com/go-playground/validator/v10"
@@ -122,8 +124,8 @@ func (p *productServiceImpl) FindById(ctx context.Context, id uint) (*web.Produc
 	return response, nil
 }
 
-func (p *productServiceImpl) FindAll(ctx context.Context) ([]*web.ProductResponse, error) {
-	result, err := p.ProductRepo.FindAll(ctx)
+func (p *productServiceImpl) FindAll(ctx context.Context, page, pageSize int) (*pg.PaginatedResponse, error) {
+	result, totalItems, err := p.ProductRepo.FindAll(ctx, page, pageSize)
 	if err != nil {
 		return nil, fmt.Errorf("product service: find all: %w", err)
 	}
@@ -147,7 +149,10 @@ func (p *productServiceImpl) FindAll(ctx context.Context) ([]*web.ProductRespons
 		responses = append(responses, &response)
 	}
 
-	return responses, nil
+	totalPage := int(math.Ceil(float64(totalItems) / float64(pageSize)))
+
+	paginateResp := helper.ToPaginatedResponse(int64(page), totalPage, totalItems, responses)
+	return paginateResp, nil
 }
 
 func (p *productServiceImpl) AddStock(ctx context.Context, req *web.ProductStockUpdateRequest) (*web.ProductResponse, error) {

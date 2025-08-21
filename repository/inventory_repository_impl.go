@@ -76,12 +76,19 @@ func (i *inventoryRepositoryImpl) FindById(ctx context.Context, invId uint) (*en
 	return &dataInv, nil
 }
 
-func (i *inventoryRepositoryImpl) FindAll(ctx context.Context) ([]*entity.Inventory, error) {
+func (i *inventoryRepositoryImpl) FindAll(ctx context.Context, page, pageSize int) ([]*entity.Inventory, int64, error) {
 	var dataInv []*entity.Inventory
-	result := i.Db.WithContext(ctx).Find(&dataInv)
-	if result.Error != nil {
-		return nil, fmt.Errorf("inventory repo: find all: %w", result.Error)
+	var totalItems int64
+
+	if err := i.Db.WithContext(ctx).Model(&entity.Inventory{}).Count(&totalItems).Error; err != nil {
+		return nil, 0, err
 	}
 
-	return dataInv, nil
+	offset := (page - 1) * pageSize
+
+	if err := i.Db.WithContext(ctx).Limit(pageSize).Offset(offset).Find(&dataInv).Error; err != nil {
+		return nil, 0, err
+	}
+	
+	return dataInv, totalItems, nil
 }

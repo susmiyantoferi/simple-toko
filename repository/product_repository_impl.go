@@ -81,14 +81,22 @@ func (p *productRepositoryImpl) FindById(ctx context.Context, id uint) (*entity.
 	return &product, nil
 }
 
-func (p *productRepositoryImpl) FindAll(ctx context.Context) ([]*entity.Product, error) {
+func (p *productRepositoryImpl) FindAll(ctx context.Context, page, pageSize int) ([]*entity.Product, int64, error) {
 	var product []*entity.Product
+	var totalItems int64
 
-	if err := p.Db.WithContext(ctx).Preload("Inventory").Find(&product).Error; err != nil {
-		return nil, fmt.Errorf("product repo: find all: %w", err)
+	if err := p.Db.WithContext(ctx).Model(&entity.Product{}).Count(&totalItems).Error; err != nil {
+		return nil, 0, err
 	}
 
-	return product, nil
+	offset := (page - 1) * pageSize
+
+	if err := p.Db.WithContext(ctx).Preload("Inventory").Limit(pageSize).
+		Offset(offset).Find(&product).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return product, totalItems, nil
 }
 
 func (p *productRepositoryImpl) AddStock(ctx context.Context, id uint, stock int) (*entity.Product, error) {

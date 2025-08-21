@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"simple-toko/entity"
 	"simple-toko/helper"
 	"simple-toko/repository"
+	pg "simple-toko/web"
 	web "simple-toko/web/inventory"
 
 	"github.com/go-playground/validator/v10"
@@ -96,8 +98,8 @@ func (i *inventoryServiceImpl) FindById(ctx context.Context, invId uint) (*web.I
 
 }
 
-func (i *inventoryServiceImpl) FindAll(ctx context.Context) ([]*web.InventoryResponse, error) {
-	result, err := i.InventoryRepo.FindAll(ctx)
+func (i *inventoryServiceImpl) FindAll(ctx context.Context, page, pageSize int) (*pg.PaginatedResponse, error) {
+	result, totalItems, err := i.InventoryRepo.FindAll(ctx, page, pageSize)
 	if err != nil {
 		return nil, fmt.Errorf("user service: find all: %w", err)
 	}
@@ -113,5 +115,9 @@ func (i *inventoryServiceImpl) FindAll(ctx context.Context) ([]*web.InventoryRes
 		responses = append(responses, &response)
 	}
 
-	return responses, nil
+	totalPage := int(math.Ceil(float64(totalItems) / float64(pageSize)))
+
+	paginateResp := helper.ToPaginatedResponse(int64(page), totalPage, totalItems, responses)
+
+	return paginateResp, nil
 }

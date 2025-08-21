@@ -17,19 +17,27 @@ func NewReportRepositoryImpl(db *gorm.DB) *reportRepositoryImpl {
 	}
 }
 
-func (r *reportRepositoryImpl) MonthlySales(ctx context.Context) ([]*entity.SalesReport, error) {
+func (r *reportRepositoryImpl) MonthlySales(ctx context.Context, page, pageSize int) ([]*entity.SalesReport, int64, error) {
 	var data []*entity.SalesReport
+	var totalItems int64
+
+	if err := r.Db.WithContext(ctx).Table("orders AS o").Where("o.status_order = ?", Confirmed).
+		Select("COUNT(DISTINCT DATE_FORMAT(created_at, '%Y-%m'))").Scan(&totalItems).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
 
 	err := r.Db.WithContext(ctx).Table("order_products AS op").
 		Select("DATE_FORMAT(o.created_at, '%Y-%m') AS month, SUM(op.qty) AS total_qty, SUM(op.qty * op.unit_price) AS total_sales").
-		Joins("JOIN orders o ON op.order_id = o.id").Where("o.status_order = ?", Confirmed).
-		Group("DATE_FORMAT(o.created_at, '%Y-%m')").Order("month").Scan(&data).Error
+		Joins("JOIN orders o ON op.order_id = o.id").Where("o.status_order = ?", Confirmed).Limit(pageSize).
+		Offset(offset).Group("DATE_FORMAT(o.created_at, '%Y-%m')").Order("month").Scan(&data).Error
 
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return data, nil
+	return data, totalItems, nil
 }
 
 func (r *reportRepositoryImpl) TopProductSales(ctx context.Context, limit int) ([]*entity.TopProduct, error) {

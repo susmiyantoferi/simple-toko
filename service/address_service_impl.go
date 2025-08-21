@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"simple-toko/entity"
 	"simple-toko/helper"
 	"simple-toko/repository"
+	pg "simple-toko/web"
 	web "simple-toko/web/address"
 
 	"github.com/go-playground/validator/v10"
@@ -118,8 +120,8 @@ func (a *addressServiceImpl) FindByUserId(ctx context.Context, userId uint) ([]*
 	return responses, nil
 }
 
-func (a *addressServiceImpl) FindAll(ctx context.Context) ([]*web.AddressResponse, error) {
-	result, err := a.AddressRepository.FindAll(ctx)
+func (a *addressServiceImpl) FindAll(ctx context.Context, page, pageSize int) (*pg.PaginatedResponse, error) {
+	result, totalItems, err := a.AddressRepository.FindAll(ctx, page, pageSize)
 	if err != nil {
 		return nil, fmt.Errorf("address service: find all: %w", err)
 	}
@@ -139,5 +141,9 @@ func (a *addressServiceImpl) FindAll(ctx context.Context) ([]*web.AddressRespons
 		responses = append(responses, &response)
 	}
 
-	return responses, nil
+	totalPage := int(math.Ceil(float64(totalItems) / float64(pageSize)))
+
+	paginateResp := helper.ToPaginatedResponse(int64(page), totalPage, totalItems, responses)
+
+	return paginateResp, nil
 }

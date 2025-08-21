@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	web "simple-toko/web/address"
+	pg "simple-toko/web"
 )
 
 type AddressService interface {
@@ -10,5 +11,5 @@ type AddressService interface {
 	Update(ctx context.Context, req *web.AddressUpdateRequest) (*web.AddressResponse, error)
 	Delete(ctx context.Context, id uint) error
 	FindByUserId(ctx context.Context, userId uint) ([]*web.AddressResponse, error)
-	FindAll(ctx context.Context) ([]*web.AddressResponse, error)
+	FindAll(ctx context.Context, page, pageSize int) (*pg.PaginatedResponse, error)
 }

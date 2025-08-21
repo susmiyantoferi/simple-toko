@@ -20,7 +20,6 @@ func NewRouter(
 
 	regist := router.Group("/api/v1/")
 	{
-		regist.GET("product", ProductHandler.FindAll)
 		regist.POST("register", UserHandler.Create)
 		regist.POST("login", UserHandler.Login)
 		regist.POST("refresh-token", UserHandler.RefreshToken)
@@ -54,7 +53,6 @@ func NewRouter(
 			admin.PUT("product/:productId", ProductHandler.Update)
 			admin.DELETE("product/:productId", ProductHandler.Delete)
 			admin.GET("product/:productId", ProductHandler.FindById)
-			//admin.GET("product", ProductHandler.FindAll)
 			admin.PUT("product/:productId/add", ProductHandler.AddStock)
 			admin.PUT("product/:productId/reduce", ProductHandler.ReduceStock)
 			admin.PUT("product/image/:productId", ProductHandler.UpdateImage)
@@ -81,6 +79,8 @@ func NewRouter(
 		cust := api.Group("/")
 		cust.Use(middleware.RoleAccessMiddleware("customer", "admin"))
 		{
+			cust.GET("product", ProductHandler.FindAll)
+
 			cust.PUT("users/:userId", UserHandler.Update)
 			cust.GET("users", UserHandler.FindAll)
 

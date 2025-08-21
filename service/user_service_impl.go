@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"simple-toko/entity"
 	"simple-toko/helper"
@@ -147,9 +148,9 @@ func (r *userServiceImpl) FindByEmail(ctx context.Context, email string) (*web.U
 	return response, nil
 }
 
-func (r *userServiceImpl) FindAll(ctx context.Context) ([]*web.UserResponse, error) {
+func (r *userServiceImpl) FindAll(ctx context.Context, page, pageSize int) (*token.PaginatedResponse, error) {
 
-	result, err := r.UserRepository.FindAll(ctx)
+	result, totalItems, err := r.UserRepository.FindAll(ctx, page, pageSize)
 	if err != nil {
 		return nil, fmt.Errorf("user service: find all: %w", err)
 	}
@@ -166,7 +167,11 @@ func (r *userServiceImpl) FindAll(ctx context.Context) ([]*web.UserResponse, err
 		responses = append(responses, &response)
 	}
 
-	return responses, nil
+	totalPage := int(math.Ceil(float64(totalItems) / float64(pageSize)))
+
+	paginateResp := helper.ToPaginatedResponse(int64(page), totalPage, totalItems, responses)
+
+	return paginateResp, nil
 }
 
 func (r *userServiceImpl) CreateAdmin(ctx context.Context, req *web.UserCreateRequest) (*web.UserResponse, error) {

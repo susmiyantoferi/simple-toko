@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"simple-toko/entity"
 	"simple-toko/helper"
 	"simple-toko/repository"
+	pg "simple-toko/web"
 	web "simple-toko/web/payment"
 
 	"github.com/go-playground/validator/v10"
@@ -110,8 +112,8 @@ func (pay *paymentServiceImpl) FindByOrderId(ctx context.Context, orderId uint) 
 	return response, nil
 }
 
-func (pay *paymentServiceImpl) FindAll(ctx context.Context) ([]*web.PaymentResponse, error) {
-	result, err := pay.PaymentRepo.FindAll(ctx)
+func (pay *paymentServiceImpl) FindAll(ctx context.Context, page, pageSize int) (*pg.PaginatedResponse, error) {
+	result, totalItems, err := pay.PaymentRepo.FindAll(ctx, page, pageSize)
 
 	if err != nil {
 		return nil, fmt.Errorf("payment service: find all: %w", err)
@@ -135,7 +137,11 @@ func (pay *paymentServiceImpl) FindAll(ctx context.Context) ([]*web.PaymentRespo
 		responses = append(responses, &response)
 	}
 
-	return responses, nil
+	totalPage := int(math.Ceil(float64(totalItems) / float64(pageSize)))
+
+	paginateResp := helper.ToPaginatedResponse(int64(page), totalPage, totalItems, responses)
+
+	return paginateResp, nil
 }
 
 func (pay *paymentServiceImpl) Delete(ctx context.Context, id uint) error {

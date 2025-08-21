@@ -105,13 +105,19 @@ func (r *userRepositoryImpl) FindByEmail(ctx context.Context, email string) (*en
 	return &user, nil
 }
 
-func (r *userRepositoryImpl) FindAll(ctx context.Context) ([]*entity.User, error) {
+func (r *userRepositoryImpl) FindAll(ctx context.Context, page, pageSize int) ([]*entity.User, int64, error) {
 	var user []*entity.User
-	result := r.Db.WithContext(ctx).Find(&user)
-	if result.Error != nil {
+	var totalItems int64
 
-		return nil, fmt.Errorf("user repo: find all: %w", result.Error)
+	if err := r.Db.WithContext(ctx).Model(&entity.User{}).Count(&totalItems).Error; err != nil {
+		return nil, 0, err
 	}
 
-	return user, nil
+	offset := (page - 1) * pageSize
+
+	if err := r.Db.WithContext(ctx).Limit(pageSize).Offset(offset).Find(&user).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return user, totalItems, nil
 }
