@@ -2,30 +2,36 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
 	"simple-toko/entity"
 	"simple-toko/helper"
 	"simple-toko/repository"
+	"simple-toko/utils"
 	pg "simple-toko/web"
 	adrs "simple-toko/web/address"
 	web "simple-toko/web/order"
+	"time"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/redis/go-redis/v9"
 )
 
 type orderServiceImpl struct {
-	OrderRepository repository.OrderRepository
+	OrderRepository  repository.OrderRepository
 	AddressRepostory repository.AddressRepository
-	Validate        *validator.Validate
+	Validate         *validator.Validate
+	Redis            *redis.Client
 }
 
-func NewOrderServiceImpl(orderRepository repository.OrderRepository, addressRepostory repository.AddressRepository, validate *validator.Validate) *orderServiceImpl {
+func NewOrderServiceImpl(orderRepository repository.OrderRepository, addressRepostory repository.AddressRepository, validate *validator.Validate, redis *redis.Client) *orderServiceImpl {
 	return &orderServiceImpl{
-		OrderRepository: orderRepository,
+		OrderRepository:  orderRepository,
 		AddressRepostory: addressRepostory,
-		Validate:        validate,
+		Validate:         validate,
+		Redis:            redis,
 	}
 }
 
@@ -34,7 +40,7 @@ var (
 	ErrProductNotFound = errors.New("product not found")
 	ErrOrderNotFound   = errors.New("order not found")
 	ErrAddressNotFound = errors.New("address not found")
-	ErrInvalidAddress = errors.New("invalid input address")
+	ErrInvalidAddress  = errors.New("invalid input address")
 )
 
 func (o *orderServiceImpl) CreateOrder(ctx context.Context, req *web.OrderCreateRequest) (*web.OrderResponse, error) {
@@ -74,6 +80,8 @@ func (o *orderServiceImpl) CreateOrder(ctx context.Context, req *web.OrderCreate
 		return nil, fmt.Errorf("order service: create order: %w", err)
 	}
 
+	utils.InvalidateCached(ctx, o.Redis, result.ID)
+
 	response := helper.ToOrderResponse(result)
 
 	return response, nil
@@ -106,6 +114,8 @@ func (o *orderServiceImpl) UpdateAddress(ctx context.Context, req *web.OrderUpda
 		return nil, fmt.Errorf("order service: update address: %w", err)
 	}
 
+	utils.InvalidateCached(ctx, o.Redis, result.ID)
+
 	response := helper.ToOrderResponse(result)
 	return response, nil
 }
@@ -117,10 +127,25 @@ func (o *orderServiceImpl) Delete(ctx context.Context, id uint) error {
 		}
 		return fmt.Errorf("order service: delete order: %w", err)
 	}
+
+	utils.InvalidateCached(ctx, o.Redis, id)
 	return nil
 }
 
 func (o *orderServiceImpl) FindById(ctx context.Context, id uint) (*web.OrderResponse, error) {
+	cacheKey := fmt.Sprintf("orders:%d", id)
+
+	cached, err := o.Redis.Get(ctx, cacheKey).Result()
+	if err == nil {
+		var response web.OrderResponse
+		if err := json.Unmarshal([]byte(cached), &response); err == nil {
+			return &response, nil
+		}
+
+	} else if err != redis.Nil {
+		fmt.Printf("Redis error: %v\n", err)
+	}
+
 	result, err := o.OrderRepository.FindById(ctx, id)
 	if err != nil {
 		if errors.Is(err, repository.ErrOrderNotFound) {
@@ -130,10 +155,26 @@ func (o *orderServiceImpl) FindById(ctx context.Context, id uint) (*web.OrderRes
 	}
 
 	response := helper.ToOrderResponse(result)
+
+	jsonData, _ := json.Marshal(response)
+	if err := o.Redis.Set(ctx, cacheKey, jsonData, 5*time.Minute).Err(); err != nil {
+		fmt.Printf("Redis set error: %v\n", err)
+	}
 	return response, nil
 }
 
 func (o *orderServiceImpl) FindAll(ctx context.Context, page, pageSize int) (*pg.PaginatedResponse, error) {
+	cacheKey := fmt.Sprintf("orders:page=%d:size=%d", page, pageSize)
+	cached, err := o.Redis.Get(ctx, cacheKey).Result()
+	if err == nil {
+		var paginateResp pg.PaginatedResponse
+		if err := json.Unmarshal([]byte(cached), &paginateResp); err == nil {
+			return &paginateResp, nil
+		}
+	} else if err != redis.Nil {
+		fmt.Printf("Redis error: %v\n", err)
+	}
+
 	result, totalItems, err := o.OrderRepository.FindAll(ctx, page, pageSize)
 	if err != nil {
 		return nil, fmt.Errorf("order service: find all order: %w", err)
@@ -179,6 +220,11 @@ func (o *orderServiceImpl) FindAll(ctx context.Context, page, pageSize int) (*pg
 
 	paginateResp := helper.ToPaginatedResponse(int64(page), totalPage, totalItems, responses)
 
+	jsonData, _ := json.Marshal(paginateResp)
+	if err := o.Redis.Set(ctx, cacheKey, jsonData, 5*time.Minute).Err(); err != nil {
+		fmt.Printf("Redis set error: %v\n", err)
+	}
+
 	return paginateResp, nil
 }
 
@@ -208,6 +254,8 @@ func (o *orderServiceImpl) ConfirmOrder(ctx context.Context, req *web.OrderUpdat
 		}
 		return nil, fmt.Errorf("order service: find id order confirm: %w", err)
 	}
+
+	utils.InvalidateCached(ctx, o.Redis, result.ID)
 
 	response := helper.ToOrderResponse(result)
 	return response, nil

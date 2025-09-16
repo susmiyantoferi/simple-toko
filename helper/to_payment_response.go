@@ -11,7 +11,7 @@ func ToPaymentResponse(pay *entity.Payment) *web.PaymentResponse {
 		Order: web.OrderInfo{
 			AmountPay:      pay.Order.AmountPay,
 			StatusOrder:    pay.Order.StatusOrder,
-			StatusDelivery: pay.Order.StatusOrder,
+			StatusDelivery: pay.Order.StatusDelivery,
 		},
 		Image:     pay.Image,
 		Status:    pay.Status,

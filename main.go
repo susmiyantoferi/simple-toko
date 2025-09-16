@@ -22,6 +22,7 @@ func main() {
 	}
 
 	db := config.Database()
+	redisClient := config.InitRedis()
 	validate := validator.New()
 
 	userRepo := repository.NewUserRepositoryImpl(db)
@@ -37,11 +38,11 @@ func main() {
 	addressHandler := handler.NewAddressHandlerImpl(addressService)
 
 	productRepo := repository.NewProductRepositoryImpl(db)
-	productService := service.NewProductServiceImpl(productRepo, inventoryRepo, validate)
+	productService := service.NewProductServiceImpl(productRepo, inventoryRepo, validate, redisClient)
 	productHandler := handler.NewProductHandlerImpl(productService)
 
 	orderRepo := repository.NewOrderRepositoryImpl(db)
-	orderService := service.NewOrderServiceImpl(orderRepo, addresRepo, validate)
+	orderService := service.NewOrderServiceImpl(orderRepo, addresRepo, validate, redisClient)
 	orderHandler := handler.NewOrderHandlerImpl(orderService)
 
 	payRepo := repository.NewPaymentRepositoryImpl(db)
