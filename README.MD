@@ -1,5 +1,15 @@
 # Simple toko
 
+Teknologi Yang Di Gunakan :
+- ![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)
+- ![GORM](https://img.shields.io/badge/GORM-0D8ABC?style=for-the-badge&logo=go&logoColor=white)
+- ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
+- ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+- ![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+- ![k6](https://img.shields.io/badge/k6-1B00FF?style=for-the-badge&logo=k6&logoColor=white)
+- ![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=json-web-tokens&logoColor=white)
+- ![CI/CD GitHub Actions](https://img.shields.io/badge/CI/CD_GitHub_Actions-6f42c1?style=for-the-badge&logo=github-actions&logoColor=white)
+
 Business flow :
 
 ![business-flow](./pict/business_flow.png)
@@ -14,16 +24,6 @@ Batasan :
 ERD :
 
 ![erd-diagram](./pict/simpletoko_ERD.png)
-
-Teknologi Yang Di Gunakan :
-- Go Gin Gonic
-- GORM
-- Mysql
-- ci/cd
-- docker
-- redis
-- k6 
-- jwt 
 
 ## Fitur utama:
 - **User Management :** Registrasi customer, admin, login, refresh token, dan autentikasi menggunakan JWT.
